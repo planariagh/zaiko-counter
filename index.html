@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>販売残数カウンター</title>
+
+<style>
+
+*{
+    box-sizing:border-box;
+}
+
+body{
+    margin:0;
+    padding:20px;
+    font-family:sans-serif;
+    background:#f5f5f5;
+    text-align:center;
+}
+
+.container{
+    max-width:600px;
+    margin:auto;
+}
+
+select{
+    width:100%;
+    padding:12px;
+    font-size:1.2rem;
+    border-radius:10px;
+    margin-bottom:15px;
+}
+
+.product-name{
+    font-size:2rem;
+    font-weight:bold;
+    margin-bottom:20px;
+}
+
+.count{
+    font-size:7rem;
+    font-weight:bold;
+    margin:25px 0;
+    transition:0.2s;
+}
+
+.normal{
+    color:#222;
+}
+
+.warning{
+    color:#ff9800;
+}
+
+.danger{
+    color:#d32f2f;
+}
+
+button{
+    width:100%;
+    border:none;
+    border-radius:15px;
+    padding:20px;
+    margin-top:12px;
+    font-size:1.8rem;
+    cursor:pointer;
+}
+
+.plus{
+    background:#4caf50;
+    color:white;
+    width:45%;
+    font-size:1.1rem;
+    padding:12px;
+    margin-top:8px;
+}
+
+.minus{
+    background:#2196f3;
+    color:white;
+    width:100%;
+    font-size:2.2rem;
+    padding:28px;
+}
+
+.reset{
+    background:#d32f2f;
+    color:white;
+}
+
+.setting-box{
+    margin-top:25px;
+    background:white;
+    padding:15px;
+    border-radius:12px;
+}
+
+input{
+    width:120px;
+    font-size:1.3rem;
+    text-align:center;
+    padding:8px;
+}
+
+.save-button{
+    width:auto;
+    padding:10px 20px;
+    margin-left:10px;
+    font-size:1rem;
+}
+
+.message{
+    height:30px;
+    margin-top:15px;
+    color:#d32f2f;
+    font-weight:bold;
+}
+
+@media(max-width:600px){
+
+    .count{
+        font-size:5rem;
+    }
+
+    button{
+        font-size:1.5rem;
+    }
+
+    .product-name{
+        font-size:1.5rem;
+    }
+}
+
+</style>
+</head>
+
+<body>
+
+<div class="container">
+
+<select id="productSelect"></select>
+
+<div class="product-name" id="productName"></div>
+
+<div id="count" class="count normal">0</div>
+
+<button class="minus" id="minusBtn">
+売れた（-1）
+</button>
+
+<button class="plus" id="plusBtn">
+＋1
+</button>
+
+<div class="setting-box">
+
+<div>
+初期在庫
+</div>
+
+<div style="margin-top:10px;">
+<input type="number" id="initialValue">
+<button class="save-button" id="saveInitial">
+保存
+</button>
+</div>
+
+</div>
+
+<button class="reset" id="resetBtn">
+リセット（3秒長押し）
+</button>
+
+<div class="message" id="message"></div>
+
+</div>
+
+<script>
+
+const PRODUCTS = [
+"牛肉の大和煮",
+"サバの味噌煮",
+"コンビーフポテト",
+"あんずジャム",
+"ピーナッツクリーム",
+"カレー"
+];
+
+const select = document.getElementById("productSelect");
+const countEl = document.getElementById("count");
+const productNameEl = document.getElementById("productName");
+const initialValueEl = document.getElementById("initialValue");
+const messageEl = document.getElementById("message");
+
+PRODUCTS.forEach(product => {
+
+    const option = document.createElement("option");
+    option.value = product;
+    option.textContent = product;
+    select.appendChild(option);
+
+});
+
+function getData(){
+
+    return JSON.parse(
+        localStorage.getItem("inventoryData")
+        || "{}"
+    );
+
+}
+
+function saveData(data){
+
+    localStorage.setItem(
+        "inventoryData",
+        JSON.stringify(data)
+    );
+
+}
+
+function ensureProduct(data, product){
+
+    if(!data[product]){
+
+        data[product] = {
+            initial:200,
+            current:200
+        };
+
+    }
+
+}
+
+function updateColor(value){
+
+    countEl.className = "count";
+
+    if(value <= 10){
+
+        countEl.classList.add("danger");
+
+    }
+    else if(value <= 30){
+
+        countEl.classList.add("warning");
+
+    }
+    else{
+
+        countEl.classList.add("normal");
+
+    }
+
+}
+
+function loadProduct(){
+
+    const product = select.value;
+
+    const data = getData();
+
+    ensureProduct(data, product);
+
+    saveData(data);
+
+    productNameEl.textContent = product;
+
+    countEl.textContent =
+        data[product].current;
+
+    initialValueEl.value =
+        data[product].initial;
+
+    updateColor(
+        data[product].current
+    );
+
+}
+
+function changeCount(diff){
+
+    const product = select.value;
+
+    const data = getData();
+
+    ensureProduct(data, product);
+
+    let value =
+        data[product].current + diff;
+
+    if(value < 0){
+        value = 0;
+    }
+
+    data[product].current = value;
+
+    saveData(data);
+
+    loadProduct();
+
+}
+
+document
+.getElementById("plusBtn")
+.addEventListener("click",()=>{
+
+    changeCount(1);
+
+});
+
+document
+.getElementById("minusBtn")
+.addEventListener("click",()=>{
+
+    changeCount(-1);
+
+});
+
+document
+.getElementById("saveInitial")
+.addEventListener("click",()=>{
+
+    const product = select.value;
+
+    const data = getData();
+
+    ensureProduct(data, product);
+
+    let initial =
+        parseInt(initialValueEl.value);
+
+    if(isNaN(initial) || initial < 0){
+
+        alert("正しい数値を入力してください");
+
+        return;
+    }
+
+    data[product].initial = initial;
+
+    data[product].current = initial;
+
+    saveData(data);
+
+    loadProduct();
+
+    messageEl.textContent =
+        "初期在庫を保存しました";
+
+    setTimeout(()=>{
+        messageEl.textContent="";
+    },2000);
+
+});
+
+let timer;
+
+const resetBtn =
+document.getElementById("resetBtn");
+
+function startReset(){
+
+    messageEl.textContent =
+        "3秒長押しでリセット";
+
+    timer = setTimeout(()=>{
+
+        const product =
+            select.value;
+
+        const data =
+            getData();
+
+        data[product].current =
+            data[product].initial;
+
+        saveData(data);
+
+        loadProduct();
+
+        messageEl.textContent =
+            "リセット完了";
+
+    },3000);
+
+}
+
+function cancelReset(){
+
+    clearTimeout(timer);
+
+}
+
+resetBtn.addEventListener(
+"mousedown",
+startReset
+);
+
+resetBtn.addEventListener(
+"mouseup",
+cancelReset
+);
+
+resetBtn.addEventListener(
+"mouseleave",
+cancelReset
+);
+
+resetBtn.addEventListener(
+"touchstart",
+startReset
+);
+
+resetBtn.addEventListener(
+"touchend",
+cancelReset
+);
+
+select.addEventListener(
+"change",
+loadProduct
+);
+
+select.value = PRODUCTS[0];
+
+loadProduct();
+
+</script>
+
+</body>
+</html>
